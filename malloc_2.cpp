@@ -44,7 +44,7 @@ void* smalloc(size_t size) {
         head->next = nullptr;
         head->prev = nullptr;
         tail = head;
-        return ptr;
+        return ptr + sizeof(MallocMetadata);
     }
     else {
         MallocMetadata* curr = head;
