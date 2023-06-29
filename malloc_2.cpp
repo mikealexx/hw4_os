@@ -33,7 +33,7 @@ void* smalloc(size_t size) {
         return NULL;
     }
     if(head == nullptr) {
-        void* ptr = sbrk(size);
+        void* ptr = sbrk(size + sizeof(MallocMetadata));
         if(ptr == (void*)-1) {
             return nullptr;
         }
