@@ -4,7 +4,7 @@
 #include <string.h>
 
 struct MallocMetadata {
-    void* addr;
+    unsigned long* addr;
     size_t size;
     bool is_free;
     MallocMetadata* next;
@@ -38,7 +38,7 @@ void* smalloc(size_t size) {
             return nullptr;
         }
         head = (MallocMetadata*)ptr;
-        head->addr = ptr;
+        head->addr = (unsigned long*)ptr;
         head->size = size;
         head->is_free = false;
         head->next = nullptr;
@@ -60,7 +60,7 @@ void* smalloc(size_t size) {
             return nullptr;
         }
         MallocMetadata* new_block = (MallocMetadata*)ptr;
-        new_block->addr = ptr;
+        new_block->addr = (unsigned long*)ptr;
         new_block->size = size;
         new_block->is_free = false;
         new_block->next = nullptr;
