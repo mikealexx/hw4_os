@@ -3,16 +3,16 @@
 #include <math.h>
 #include <string.h>
 
-struct MallocMetadata {
+typedef struct MallocMetadata {
     unsigned long* addr;
     size_t size;
     bool is_free;
     MallocMetadata* next;
     MallocMetadata* prev;
-};
+} Metadata;
 
-static MallocMetadata* head = nullptr;
-static MallocMetadata* tail = nullptr;
+static Metadata* head = nullptr;
+static Metadata* tail = nullptr;
 
 /**
  * @brief Searches for a free block with at least ‘size’ bytes or allocates (sbrk()) one if none are
@@ -33,21 +33,21 @@ void* smalloc(size_t size) {
         return NULL;
     }
     if(head == nullptr) {
-        void* ptr = sbrk(size + sizeof(MallocMetadata));
+        void* ptr = sbrk(size + sizeof(Metadata));
         if(ptr == (void*)-1) {
             return nullptr;
         }
-        head = (MallocMetadata*)ptr;
+        head = (Metadata*)ptr;
         head->addr = (unsigned long*)ptr;
         head->size = size;
         head->is_free = false;
         head->next = nullptr;
         head->prev = nullptr;
         tail = head;
-        return (void*)((unsigned long*)ptr + sizeof(MallocMetadata));
+        return (void*)((unsigned long*)ptr + sizeof(Metadata));
     }
     else {
-        MallocMetadata* curr = head;
+        Metadata* curr = head;
         while(curr != nullptr) {
             if(curr->is_free && curr->size >= size) {
                 curr->is_free = false;
@@ -59,7 +59,7 @@ void* smalloc(size_t size) {
         if(ptr == (void*)-1) {
             return nullptr;
         }
-        MallocMetadata* new_block = (MallocMetadata*)ptr;
+        Metadata* new_block = (Metadata*)ptr;
         new_block->addr = (unsigned long*)ptr;
         new_block->size = size;
         new_block->is_free = false;
@@ -109,7 +109,7 @@ void* sfree(void* p) {
     if(p == nullptr) {
         return nullptr;
     }
-    MallocMetadata* curr = head;
+    Metadata* curr = head;
     while(curr != nullptr) {
         if(curr->addr == p) {
             curr->is_free = true;
@@ -145,7 +145,7 @@ void* srealloc(void* oldp, size_t size) {
     if(oldp == nullptr) {
         return smalloc(size);
     }
-    MallocMetadata* curr = head;
+    Metadata* curr = head;
     while(curr != nullptr) {
         if(curr->addr == oldp) {
             if(curr->size >= size) { //reuse same block
@@ -167,7 +167,7 @@ void* srealloc(void* oldp, size_t size) {
 
 size_t _num_free_blocks() {
     size_t count = 0;
-    MallocMetadata* curr = head;
+    Metadata* curr = head;
     while(curr != nullptr) {
         if(curr->is_free) {
             count++;
@@ -179,7 +179,7 @@ size_t _num_free_blocks() {
 
 size_t _num_free_bytes() {
     size_t count = 0;
-    MallocMetadata* curr = head;
+    Metadata* curr = head;
     while(curr != nullptr) {
         if(curr->is_free) {
             count += curr->size;
@@ -191,7 +191,7 @@ size_t _num_free_bytes() {
 
 size_t _num_allocated_blocks() {
     size_t count = 0;
-    MallocMetadata* curr = head;
+    Metadata* curr = head;
     while(curr != nullptr) {
         count++;
         curr = curr->next;
@@ -201,7 +201,7 @@ size_t _num_allocated_blocks() {
 
 size_t _num_allocated_bytes() {
     size_t count = 0;
-    MallocMetadata* curr = head;
+    Metadata* curr = head;
     while(curr != nullptr) {
         count += curr->size;
         curr = curr->next;
@@ -210,9 +210,9 @@ size_t _num_allocated_bytes() {
 }
 
 size_t _num_meta_data_bytes() {
-    return _num_allocated_blocks() * sizeof(MallocMetadata);
+    return _num_allocated_blocks() * sizeof(Metadata);
 }
 
 size_t _size_meta_data() {
-    return sizeof(MallocMetadata);
+    return sizeof(Metadata);
 }
