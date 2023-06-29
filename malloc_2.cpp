@@ -38,7 +38,7 @@ void* smalloc(size_t size) {
             return nullptr;
         }
         head = (Metadata*)ptr;
-        head->addr = (unsigned long*)ptr;
+        head->addr = (unsigned long*)ptr + sizeof(Metadata);
         head->size = size;
         head->is_free = false;
         head->next = nullptr;
@@ -51,7 +51,7 @@ void* smalloc(size_t size) {
         while(curr != nullptr) {
             if(curr->is_free && curr->size >= size) {
                 curr->is_free = false;
-                return (void*)(curr->addr + sizeof(Metadata));
+                return (void*)(curr->addr);
             }
             curr = curr->next;
         }
@@ -60,7 +60,7 @@ void* smalloc(size_t size) {
             return nullptr;
         }
         Metadata* new_block = (Metadata*)ptr;
-        new_block->addr = (unsigned long*)ptr;
+        new_block->addr = (unsigned long*)ptr + sizeof(Metadata);
         new_block->size = size;
         new_block->is_free = false;
         new_block->next = nullptr;
