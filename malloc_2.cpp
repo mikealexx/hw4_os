@@ -44,7 +44,7 @@ void* smalloc(size_t size) {
         head->next = nullptr;
         head->prev = nullptr;
         tail = head;
-        return (void*)((unsigned long*)ptr + sizeof(Metadata));
+        return (void*)((char*)ptr + sizeof(Metadata));
     }
     else {
         Metadata* curr = head;
@@ -67,7 +67,7 @@ void* smalloc(size_t size) {
         new_block->prev = tail;
         tail->next = new_block;
         tail = new_block;
-        return (void*)((unsigned long*)ptr + sizeof(Metadata));
+        return (void*)((char*)ptr + sizeof(Metadata));
     }
 }
 
