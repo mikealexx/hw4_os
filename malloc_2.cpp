@@ -51,11 +51,11 @@ void* smalloc(size_t size) {
         while(curr != nullptr) {
             if(curr->is_free && curr->size >= size) {
                 curr->is_free = false;
-                return curr->addr;
+                return (void*)(curr->addr + sizeof(Metadata));
             }
             curr = curr->next;
         }
-        void* ptr = sbrk(size);
+        void* ptr = sbrk(size + sizeof(Metadata));
         if(ptr == (void*)-1) {
             return nullptr;
         }
@@ -67,7 +67,7 @@ void* smalloc(size_t size) {
         new_block->prev = tail;
         tail->next = new_block;
         tail = new_block;
-        return ptr;
+        return (void*)((unsigned long*)ptr + sizeof(Metadata));
     }
 }
 
@@ -111,7 +111,7 @@ void* sfree(void* p) {
     }
     Metadata* curr = head;
     while(curr != nullptr) {
-        if(curr->addr == p) {
+        if(curr->addr + sizeof(Metadata) == (unsigned long*)p) {
             curr->is_free = true;
             return nullptr;
         }
@@ -147,7 +147,7 @@ void* srealloc(void* oldp, size_t size) {
     }
     Metadata* curr = head;
     while(curr != nullptr) {
-        if(curr->addr == oldp) {
+        if(curr->addr + sizeof(Metadata) == (unsigned long*)oldp) {
             if(curr->size >= size) { //reuse same block
                 return oldp;
             }
@@ -157,7 +157,7 @@ void* srealloc(void* oldp, size_t size) {
                     return nullptr;
                 }
                 memmove(ptr, oldp, curr->size);
-                return ptr; //edge case - oldp isn't a valid address
+                return (void*)((unsigned long*)ptr + sizeof(Metadata)); //edge case - oldp isn't a valid address
             }
         }
         curr = curr->next;
