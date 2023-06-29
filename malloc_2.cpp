@@ -107,16 +107,17 @@ void* scalloc(size_t num, size_t size) {
  */
 void* sfree(void* p) {
     if(p == nullptr) {
-        return;
+        return nullptr;
     }
     MallocMetadata* curr = head;
     while(curr != nullptr) {
         if(curr->addr == p) {
             curr->is_free = true;
-            return;
+            return nullptr;
         }
         curr = curr->next;
     }
+    return nullptr;
 }
 
 /**
@@ -161,6 +162,7 @@ void* srealloc(void* oldp, size_t size) {
         }
         curr = curr->next;
     }
+    return nullptr;
 }
 
 size_t _num_free_blocks() {
