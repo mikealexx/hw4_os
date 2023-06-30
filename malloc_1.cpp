@@ -5,7 +5,7 @@
 /**
  * @brief Tries to allocate size bytes.
  * 
- * @param size 
+ * @param size The size of the block to allocate.
  * @return void*
 *           i. Success: a pointer to the first allocated byte within the allocated block.
             ii. Failure:

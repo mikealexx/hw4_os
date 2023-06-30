@@ -18,7 +18,7 @@ static Metadata* tail = nullptr;
  * @brief Searches for a free block with at least ‘size’ bytes or allocates (sbrk()) one if none are
             found.
  * 
- * @param size 
+ * @param size The size of the block to allocate.
  * @return void* 
  *          Success – returns pointer to the first byte in the allocated block (excluding the meta-data of
                         course)
@@ -76,8 +76,8 @@ void* smalloc(size_t size) {
             or allocates if none are found. In other words, find/allocate size * num bytes and set all
             bytes to 0.
  * 
- * @param num 
- * @param size 
+ * @param num The number of elements.
+ * @param size The size of each element.
  * @return void* 
  *          Success - returns pointer to the first byte in the allocated block.
             ii. Failure –
@@ -100,7 +100,7 @@ void* scalloc(size_t num, size_t size) {
 /**
  * @brief Releases the usage of the block that starts with the pointer ‘p’.
  * 
- * @param p 
+ * @param p The pointer to the block to release.
  * @return void* 
  *          If ‘p’ is NULL or already released, simply returns.
             Presume that all pointers ‘p’ truly points to the beginning of an allocated block.
@@ -126,8 +126,8 @@ void* sfree(void* p) {
             new allocated space and frees the oldp.
 
  * 
- * @param oldp 
- * @param size 
+ * @param oldp The pointer to the block to reallocate.
+ * @param size The new size of the block.
  * @return void* 
  *          i. Success –
                 a. Returns pointer to the first byte in the (newly) allocated space.
