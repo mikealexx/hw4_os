@@ -111,10 +111,9 @@ void* sfree(void* p) {
         return nullptr;
     }
     Metadata* curr = (Metadata*)((size_t)p - sizeof(Metadata));
-    if(curr->is_free) {
-        return nullptr;
+    if(!curr->is_free) {
+        curr->is_free = true;
     }
-    curr->is_free = true;
     return nullptr;
 }
 
