@@ -142,25 +142,16 @@ void* srealloc(void* oldp, size_t size) {
     if(oldp == nullptr) {
         return smalloc(size);
     }
-    Metadata* curr = head;
-    while(curr != nullptr) {
-        if((size_t)curr->addr == (size_t)oldp) {
-            if(curr->size >= size) { //reuse same block
-                return oldp;
-            }
-            else {
-                void* ptr = smalloc(size);
-                if(ptr == nullptr) {
-                    return nullptr;
-                }
-                memmove(ptr, oldp, curr->size);
-                curr->is_free = true;
-                return ptr; //edge case - oldp isn't a valid address
-            }
-        }
-        curr = curr->next;
+    if(size <= ((Metadata*)((size_t)oldp - sizeof(Metadata)))->size) {
+        return oldp;
     }
-    return nullptr;
+    void* new_ptr = smalloc(size);
+    if(new_ptr == nullptr) {
+        return nullptr;
+    }
+    memmove(new_ptr, oldp, ((Metadata*)((size_t)oldp - sizeof(Metadata)))->size);
+    sfree(oldp);
+    return new_ptr;
 }
 
 size_t _num_free_blocks() {
