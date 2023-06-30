@@ -157,6 +157,7 @@ void* srealloc(void* oldp, size_t size) {
                     return nullptr;
                 }
                 memmove(ptr, oldp, curr->size);
+                curr->is_free = true;
                 return ptr; //edge case - oldp isn't a valid address
             }
         }
