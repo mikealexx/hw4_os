@@ -12,7 +12,6 @@ typedef struct MallocMetadata {
 } Metadata;
 
 static Metadata* head = nullptr;
-static Metadata* tail = nullptr;
 
 /**
  * @brief Searches for a free block with at least ‘size’ bytes or allocates (sbrk()) one if none are
@@ -43,17 +42,20 @@ void* smalloc(size_t size) {
         head->is_free = false;
         head->next = nullptr;
         head->prev = nullptr;
-        tail = head;
         return head->addr;
     }
     else {
         Metadata* curr = head;
+        Metadata* tail = head;
         while(curr != nullptr) {
             if(curr->is_free && curr->size >= size) {
                 curr->is_free = false;
                 return curr->addr;
             }
             curr = curr->next;
+            if(tail->next != nullptr) {
+                tail = tail->next;
+            }
         }
         void* ptr = sbrk(size + sizeof(Metadata));
         if(ptr == (void*)-1) {
@@ -66,7 +68,6 @@ void* smalloc(size_t size) {
         new_block->next = nullptr;
         new_block->prev = tail;
         tail->next = new_block;
-        tail = new_block;
         return new_block->addr;
     }
 }
