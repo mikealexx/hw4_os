@@ -110,14 +110,11 @@ void* sfree(void* p) {
     if(p == nullptr) {
         return nullptr;
     }
-    Metadata* curr = head;
-    while(curr != nullptr) {
-        if((size_t)curr->addr == (size_t)p) {
-            curr->is_free = true;
-            return nullptr;
-        }
-        curr = curr->next;
+    Metadata* curr = (Metadata*)((size_t)p - sizeof(Metadata));
+    if(curr->is_free) {
+        return nullptr;
     }
+    curr->is_free = true;
     return nullptr;
 }
 
