@@ -174,7 +174,7 @@ typedef struct Initialize {
             curr->prev = last;
             last->next = curr;
             last = curr;
-            curr = nullptr;
+            curr = curr->next;
             curr_bottom = (void*)((size_t)curr_bottom + 128 * 1024);
         }
     }
