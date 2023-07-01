@@ -27,7 +27,7 @@ static bool initialized = false;
 static Metadata* orders[11] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 static Metadata* mmap_head = nullptr;
 static Metadata* allocated_blocks = nullptr;
-static const uint32_t COOKIE = generateRandomCookie();
+static uint32_t COOKIE = 0;
 
 void _validate_cookie(Metadata* metadata_ptr) {
     if(metadata_ptr != nullptr) {
@@ -41,7 +41,7 @@ void _align_program_break() {
     size_t curr_break = (size_t)sbrk(0);
     size_t aligned_addr = (curr_break + (32 * 128 * 1024 - 1)) & ~((32 * 128 * 1024) - 1);
     size_t diff = aligned_addr - curr_break;
-    sbrk(diff);
+    size_t new_break = (size_t)sbrk(diff);
 }
 
 void _add_block_to_free_list(void* metadata_ptr, int order) {
@@ -79,6 +79,7 @@ void _trim_if_large_enough(void* metadata_ptr, size_t actual_size,  int order) {
     while(actual_size <= (curr->size + sizeof(Metadata)) / 2) { //split
         curr_order--;
         Metadata* new_block = (Metadata*)((size_t)metadata_ptr + (size_t)(pow(2, curr_order) * 128));
+        new_block->cookie = COOKIE;
         new_block->addr = (void*)((size_t)new_block + sizeof(Metadata));
         new_block->size = pow(2, curr_order) * 128 - sizeof(Metadata);
         new_block->is_free = true;
@@ -152,12 +153,14 @@ typedef struct Initialize {
         if(initialized) {
             return;
         }
+        COOKIE = generateRandomCookie();
         initialized = true;
         _align_program_break();
         void* curr_bottom = sbrk(32 * 128 * 1024); //allocate 32 * 128KB
         Metadata* curr = nullptr;
         Metadata* last = nullptr;
         last = (Metadata*)curr_bottom;
+        last->cookie = COOKIE;
         last->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
         last->size = 128 * 1024 - sizeof(Metadata);
         last->is_free = true;
@@ -167,6 +170,7 @@ typedef struct Initialize {
         curr_bottom = (void*)((size_t)curr_bottom + 128 * 1024);
         for(int i = 1; i < 32; i++) {
             curr = (Metadata*)curr_bottom;
+            curr->cookie = COOKIE;
             curr->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
             curr->size = 128 * 1024 - sizeof(Metadata);
             curr->is_free = true;
@@ -180,15 +184,8 @@ typedef struct Initialize {
     }
 } InitOrders;
 
-static InitOrders init; //initialize first 32 blocks of 128KB
-
 int _order(size_t size) {
-    int order = 0;
-    while(size + sizeof(Metadata) > 128) {
-        size /= 2;
-        order++;
-    }
-    return order;
+    return ceil(log2(size/128));
 }
 
 /**
@@ -206,6 +203,7 @@ int _order(size_t size) {
 
  */
 void* smalloc(size_t size) {
+    static InitOrders init; //initialize first 32 blocks of 128KB
     if(size == 0 || size > pow(10, 8)) {
         return NULL;
     }
@@ -235,7 +233,7 @@ void* smalloc(size_t size) {
         }
         return new_block->addr;
     }
-    int order = _order(size);
+    int order = _order(size + sizeof(Metadata));
     for(int i = order; i < 11; i++) { //find lowest order with free blocks that fits
         if(orders[i] == nullptr) {
             continue;
@@ -258,6 +256,8 @@ void* smalloc(size_t size) {
                 _trim_if_large_enough((void*)curr, size, i);
                 if(allocated_blocks == nullptr) { //add to used blocks list
                     allocated_blocks = curr;
+                    curr->prev = nullptr;
+                    curr->next = nullptr;
                 }
                 else {
                     Metadata* last = allocated_blocks;
