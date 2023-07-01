@@ -87,7 +87,7 @@ void _trim_if_large_enough(void* metadata_ptr, size_t actual_size,  int order) {
         new_block->prev = nullptr;
         _add_block_to_free_list((void*)new_block, curr_order);
     }
-    curr->size = actual_size;
+    curr->size = pow(2, curr_order) * 128 - sizeof(Metadata);
 }
 
 void _merge_buddy_blocks(void* metadata_ptr, int order) {
