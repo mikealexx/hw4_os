@@ -433,6 +433,7 @@ size_t _num_free_bytes() {
 }
 
 size_t _num_allocated_blocks() {
+    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     Metadata* allocated = allocated_blocks;
     while(allocated != nullptr) {
