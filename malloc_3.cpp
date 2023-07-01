@@ -407,6 +407,7 @@ void* srealloc(void* oldp, size_t size) {
 }
 
 size_t _num_free_blocks() {
+    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     for(int i = 0; i < 11; i++) {
         Metadata* curr = orders[i];
@@ -420,6 +421,7 @@ size_t _num_free_blocks() {
 }
 
 size_t _num_free_bytes() {
+    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     for(int i = 0; i < 11; i++) {
         Metadata* curr = orders[i];
@@ -459,6 +461,7 @@ size_t _num_allocated_blocks() {
 }
 
 size_t _num_allocated_bytes() {
+    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     Metadata* allocated = allocated_blocks;
     while(allocated != nullptr) {
@@ -484,10 +487,12 @@ size_t _num_allocated_bytes() {
 }
 
 size_t _num_meta_data_bytes() {
+    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = _num_allocated_blocks() * sizeof(Metadata);
     return count;
 }
 
 size_t _size_meta_data() {
+    static InitOrders init; //initialize first 32 blocks of 128KB
     return sizeof(Metadata);
 }
