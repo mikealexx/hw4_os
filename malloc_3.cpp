@@ -78,6 +78,9 @@ void _trim_if_large_enough(void* metadata_ptr, size_t actual_size,  int order) {
     int curr_order = order;
     while(actual_size <= (curr->size + sizeof(Metadata)) / 2) { //split
         curr_order--;
+        if(curr_order < 0) {
+            break;
+        }
         Metadata* new_block = (Metadata*)((size_t)metadata_ptr + (size_t)(pow(2, curr_order) * 128));
         new_block->cookie = COOKIE;
         new_block->addr = (void*)((size_t)new_block + sizeof(Metadata));
@@ -86,8 +89,9 @@ void _trim_if_large_enough(void* metadata_ptr, size_t actual_size,  int order) {
         new_block->next = nullptr;
         new_block->prev = nullptr;
         _add_block_to_free_list((void*)new_block, curr_order);
+        curr->size = pow(2, curr_order) * 128 - sizeof(Metadata);
     }
-    curr->size = pow(2, curr_order) * 128 - sizeof(Metadata);
+    //curr->size = pow(2, curr_order) * 128 - sizeof(Metadata);
 }
 
 void _merge_buddy_blocks(void* metadata_ptr, int order) {
@@ -185,6 +189,9 @@ typedef struct Initialize {
 } InitOrders;
 
 int _order(size_t size) {
+    if(size/128 < 1) {
+        return 0;
+    }
     return ceil(log2(size/128));
 }
 
@@ -243,15 +250,19 @@ void* smalloc(size_t size) {
             _validate_cookie(curr);
             if(curr->is_free) {
                 curr->is_free = false;
-                if(curr->prev == nullptr && curr->next == nullptr) {
+                Metadata* prev = curr->prev;
+                Metadata* next = curr->next;
+                if(prev == nullptr && next == nullptr) {
                     orders[i] = nullptr;
                 }
-                if(curr->prev != nullptr) {
-                    curr->prev->next = curr->next;
+                if(prev != nullptr) {
+                    prev->next = next;
                 }
-                if(curr->next != nullptr) {
-                    curr->next->prev = curr->prev;
-                    orders[i] = curr->next;
+                else {
+                    orders[i] = next;
+                }
+                if(next != nullptr) {
+                    next->prev = prev;
                 }
                 _trim_if_large_enough((void*)curr, size, i);
                 if(allocated_blocks == nullptr) { //add to used blocks list
