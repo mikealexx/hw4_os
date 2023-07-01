@@ -99,7 +99,7 @@ void _merge_buddy_blocks(void* metadata_ptr, int order) {
     _validate_cookie(curr);
     Metadata* buddy = nullptr;
     Metadata* last = nullptr;
-    Metadata* freed = nullptr;
+    //Metadata* freed = nullptr;
     int curr_order = order;
     while(curr_order < 10) {
         buddy = (Metadata*)((size_t)curr ^ (size_t)(pow(2, curr_order) * 128));
@@ -118,9 +118,9 @@ void _merge_buddy_blocks(void* metadata_ptr, int order) {
                     orders[curr_order] = buddy->next;
                 }
                 last = curr;
-                if(last != nullptr) {
-                    freed = last;
-                }
+                // if(last != nullptr) {
+                //     freed = last;
+                // }
                 curr_order++;
             }
             else {
@@ -136,9 +136,9 @@ void _merge_buddy_blocks(void* metadata_ptr, int order) {
                     orders[curr_order] = curr->next;
                 }
                 last = buddy;
-                if(last != nullptr) {
-                    freed = last;
-                }
+                // if(last != nullptr) {
+                //     freed = last;
+                // }
                 curr_order++;
             }
         }
