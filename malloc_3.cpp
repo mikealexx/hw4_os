@@ -41,7 +41,7 @@ void _align_program_break() {
     size_t curr_break = (size_t)sbrk(0);
     size_t aligned_addr = (curr_break + (32 * 128 * 1024 - 1)) & ~((32 * 128 * 1024) - 1);
     size_t diff = aligned_addr - curr_break;
-    size_t new_break = (size_t)sbrk(diff);
+    sbrk(diff);
 }
 
 void _add_block_to_free_list(void* metadata_ptr, int order) {
