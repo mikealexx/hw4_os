@@ -178,13 +178,14 @@ void _merge_buddy_blocks(void* metadata_ptr, int order) {
     _validate_cookie(buddy);
     Metadata* last = nullptr;
     if(curr_order >= 10) {
+        _add_block_to_free_list((void*)curr, curr_order);
         return;
     }
     if(buddy == nullptr || !buddy->is_free || buddy->size != curr->size) {
         _add_block_to_free_list((void*)curr, curr_order);
         return;
     }
-    _remove_from_list((void*)curr, curr_order);
+    //_remove_from_list((void*)curr, curr_order);
     _remove_from_list((void*)buddy, curr_order);
     if(curr->addr < buddy->addr) {
         curr_order++;
@@ -213,7 +214,7 @@ typedef struct Initialize {
         last = (Metadata*)curr_bottom;
         last->cookie = COOKIE;
         last->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
-        last->size = 128 * 1024 - sizeof(Metadata);
+        last->size = 128 * 1024;
         last->is_free = true;
         last->next = nullptr;
         last->prev = nullptr;
@@ -223,7 +224,7 @@ typedef struct Initialize {
             curr = (Metadata*)curr_bottom;
             curr->cookie = COOKIE;
             curr->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
-            curr->size = 128 * 1024 - sizeof(Metadata);
+            curr->size = 128 * 1024;
             curr->is_free = true;
             curr->next = nullptr;
             curr->prev = last;
@@ -269,7 +270,7 @@ void* smalloc(size_t size) {
         Metadata* new_block = (Metadata*)ptr;
         new_block->cookie = COOKIE;
         new_block->addr = (void*)((size_t)ptr + sizeof(Metadata));
-        new_block->size = size;
+        new_block->size = size + sizeof(Metadata);
         new_block->is_free = false;
         new_block->next = nullptr;
         new_block->prev = nullptr;
@@ -500,7 +501,7 @@ size_t _num_free_bytes() {
         Metadata* curr = orders[i];
         while(curr != nullptr) {
             _validate_cookie(curr);
-            count += curr->size;
+            count += curr->size - sizeof(Metadata);
             curr = curr->next;
         }
     }
@@ -539,21 +540,21 @@ size_t _num_allocated_bytes() {
     Metadata* allocated = allocated_blocks;
     while(allocated != nullptr) {
         _validate_cookie(allocated);
-        count+= allocated->size;
+        count+= allocated->size - sizeof(Metadata);
         allocated = allocated->next;
     }
     for(int i = 0; i < 11; i++) {
         Metadata* curr = orders[i];
         while(curr != nullptr) {
             _validate_cookie(curr);
-            count+= curr->size;
+            count+= curr->size - sizeof(Metadata);
             curr = curr->next;
         }
     }
     Metadata* mmap = mmap_head;
     while(mmap != nullptr) {
         _validate_cookie(mmap);
-        count+= mmap->size;
+        count+= mmap->size - sizeof(Metadata);
         mmap = mmap->next;
     }
     return count;
