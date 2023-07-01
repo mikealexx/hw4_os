@@ -44,6 +44,40 @@ void _align_program_break() {
     sbrk(diff);
 }
 
+void _init() {
+    if(initialized) {
+        return;
+    }
+    COOKIE = generateRandomCookie();
+    initialized = true;
+    _align_program_break();
+    void* curr_bottom = sbrk(32 * 128 * 1024); //allocate 32 * 128KB
+    Metadata* curr = nullptr;
+    Metadata* last = nullptr;
+    last = (Metadata*)curr_bottom;
+    last->cookie = COOKIE;
+    last->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
+    last->size = 128 * 1024;
+    last->is_free = true;
+    last->next = nullptr;
+    last->prev = nullptr;
+    orders[10] = last;
+    curr_bottom = (void*)((size_t)curr_bottom + 128 * 1024);
+    for(int i = 1; i < 32; i++) {
+        curr = (Metadata*)curr_bottom;
+        curr->cookie = COOKIE;
+        curr->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
+        curr->size = 128 * 1024;
+        curr->is_free = true;
+        curr->next = nullptr;
+        curr->prev = last;
+        last->next = curr;
+        last = curr;
+        curr = curr->next;
+        curr_bottom = (void*)((size_t)curr_bottom + 128 * 1024);
+    }
+}
+
 void _add_block_to_free_list(void* metadata_ptr, int order) {
     Metadata* curr = (Metadata*)metadata_ptr;
     _validate_cookie(curr);
@@ -115,62 +149,6 @@ void _remove_from_list(void* metadata_ptr, int order) {
 }
 
 void _merge_buddy_blocks(void* metadata_ptr, int order) {
-    // Metadata* curr = (Metadata*)metadata_ptr;
-    // _validate_cookie(curr);
-    // Metadata* buddy = nullptr;
-    // Metadata* last = nullptr;
-    // //Metadata* freed = nullptr;
-    // int curr_order = order;
-    // while(curr_order < 10) {
-    //     buddy = (Metadata*)((size_t)curr ^ (size_t)(pow(2, curr_order) * 128));
-    //     _validate_cookie(buddy);
-    //     if(buddy->is_free && buddy->size == curr->size) {
-    //         if(curr->addr < buddy->addr) {
-    //             curr->size = curr->size * 2;
-    //             curr->next = buddy->next;
-    //             if(buddy->next != nullptr) {
-    //                 buddy->next->prev = curr;
-    //             }
-    //             if(buddy->prev != nullptr) {
-    //                 buddy->prev->next = buddy->next;
-    //             }
-    //             else {
-    //                 orders[curr_order] = buddy->next;
-    //             }
-    //             last = curr;
-    //             // if(last != nullptr) {
-    //             //     freed = last;
-    //             // }
-    //             curr_order++;
-    //         }
-    //         else {
-    //             buddy->size = buddy->size * 2;
-    //             buddy->next = curr->next;
-    //             if(curr->next != nullptr) {
-    //                 curr->next->prev = buddy;
-    //             }
-    //             if(curr->prev != nullptr) {
-    //                 curr->prev->next = curr->next;
-    //             }
-    //             else {
-    //                 orders[curr_order] = curr->next;
-    //             }
-    //             last = buddy;
-    //             // if(last != nullptr) {
-    //             //     freed = last;
-    //             // }
-    //             curr_order++;
-    //         }
-    //     }
-    //     else {
-    //         break;
-    //     }
-    // }
-    // if(last != nullptr) {
-    //     _merge_buddy_blocks((void*)last, curr_order);
-    // }
-    // _add_block_to_free_list((void*)curr, curr_order);
-
     Metadata* curr = (Metadata*)metadata_ptr;
     _validate_cookie(curr);
     int curr_order = order;
@@ -200,42 +178,6 @@ void _merge_buddy_blocks(void* metadata_ptr, int order) {
     _merge_buddy_blocks((void*)last, curr_order);
 }
 
-typedef struct Initialize {
-    Initialize() {
-        if(initialized) {
-            return;
-        }
-        COOKIE = generateRandomCookie();
-        initialized = true;
-        _align_program_break();
-        void* curr_bottom = sbrk(32 * 128 * 1024); //allocate 32 * 128KB
-        Metadata* curr = nullptr;
-        Metadata* last = nullptr;
-        last = (Metadata*)curr_bottom;
-        last->cookie = COOKIE;
-        last->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
-        last->size = 128 * 1024;
-        last->is_free = true;
-        last->next = nullptr;
-        last->prev = nullptr;
-        orders[10] = last;
-        curr_bottom = (void*)((size_t)curr_bottom + 128 * 1024);
-        for(int i = 1; i < 32; i++) {
-            curr = (Metadata*)curr_bottom;
-            curr->cookie = COOKIE;
-            curr->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
-            curr->size = 128 * 1024;
-            curr->is_free = true;
-            curr->next = nullptr;
-            curr->prev = last;
-            last->next = curr;
-            last = curr;
-            curr = curr->next;
-            curr_bottom = (void*)((size_t)curr_bottom + 128 * 1024);
-        }
-    }
-} InitOrders;
-
 int _order(size_t size) {
     if(size/128 < 1) {
         return 0;
@@ -258,7 +200,7 @@ int _order(size_t size) {
 
  */
 void* smalloc(size_t size) {
-    static InitOrders init; //initialize first 32 blocks of 128KB
+    _init(); //initialize first 32 blocks of 128KB
     if(size == 0 || size > pow(10, 8)) {
         return NULL;
     }
@@ -485,7 +427,6 @@ void* srealloc(void* oldp, size_t size) {
 }
 
 size_t _num_free_blocks() {
-    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     for(int i = 0; i < 11; i++) {
         Metadata* curr = orders[i];
@@ -499,7 +440,6 @@ size_t _num_free_blocks() {
 }
 
 size_t _num_free_bytes() {
-    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     for(int i = 0; i < 11; i++) {
         Metadata* curr = orders[i];
@@ -513,7 +453,6 @@ size_t _num_free_bytes() {
 }
 
 size_t _num_allocated_blocks() {
-    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     Metadata* allocated = allocated_blocks;
     while(allocated != nullptr) {
@@ -539,7 +478,6 @@ size_t _num_allocated_blocks() {
 }
 
 size_t _num_allocated_bytes() {
-    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     Metadata* allocated = allocated_blocks;
     while(allocated != nullptr) {
@@ -565,12 +503,10 @@ size_t _num_allocated_bytes() {
 }
 
 size_t _num_meta_data_bytes() {
-    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = _num_allocated_blocks() * sizeof(Metadata);
     return count;
 }
 
 size_t _size_meta_data() {
-    static InitOrders init; //initialize first 32 blocks of 128KB
     return sizeof(Metadata);
 }
