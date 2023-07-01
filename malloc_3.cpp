@@ -23,6 +23,7 @@ uint32_t generateRandomCookie() {
     return random_number;
 }
 
+static bool initialized = false;
 static Metadata* orders[11] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 static Metadata* mmap_head = nullptr;
 static Metadata* allocated_blocks = nullptr;
@@ -148,6 +149,10 @@ void _merge_buddy_blocks(void* metadata_ptr, int order) {
 
 typedef struct Initialize {
     Initialize() {
+        if(initialized) {
+            return;
+        }
+        initialized = true;
         _align_program_break();
         void* curr_bottom = sbrk(32 * 131072); //allocate 32 * 128KB
         Metadata* curr = orders[10];
@@ -174,8 +179,6 @@ typedef struct Initialize {
     }
 } InitOrders;
 
-static InitOrders init; //initialize first 32 blocks of 128KB
-
 int _order(size_t size) {
     int order = 0;
     while(size + sizeof(Metadata) > 128) {
@@ -200,6 +203,7 @@ int _order(size_t size) {
 
  */
 void* smalloc(size_t size) {
+    static InitOrders init; //initialize first 32 blocks of 128KB
     if(size == 0 || size > pow(10, 8)) {
         return NULL;
     }
@@ -427,6 +431,7 @@ size_t _num_free_bytes() {
 }
 
 size_t _num_allocated_blocks() {
+    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     Metadata* allocated = allocated_blocks;
     while(allocated != nullptr) {
