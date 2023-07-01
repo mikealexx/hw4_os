@@ -180,15 +180,23 @@ void _merge_buddy_blocks(void* metadata_ptr, int order) {
     if(curr_order >= 10) {
         return;
     }
-    if(!buddy->is_free || buddy->size != curr->size) {
+    if(buddy == nullptr || !buddy->is_free || buddy->size != curr->size) {
         _add_block_to_free_list((void*)curr, curr_order);
         return;
     }
     _remove_from_list((void*)curr, curr_order);
     _remove_from_list((void*)buddy, curr_order);
     if(curr->addr < buddy->addr) {
-        curr->size = pow(2, curr_order + 1) * 128 - sizeof(Metadata);
+        curr_order++;
+        curr->size *= 2;
+        last = curr;
     }
+    else {
+        curr_order++;
+        buddy->size *= 2;
+        last = buddy;
+    }
+    _merge_buddy_blocks((void*)last, curr_order);
 }
 
 typedef struct Initialize {
@@ -380,6 +388,9 @@ void* sfree(void* p) {
     }
     Metadata* curr = (Metadata*)((size_t)p - sizeof(Metadata));
     _validate_cookie(curr);
+    if(curr->is_free) {
+        return nullptr;
+    }
     if(curr->size >= 128 * 1024) { //allocated using mmap - use munmap to free
         Metadata* prev = curr->prev;
         Metadata* next = curr->next;
@@ -391,11 +402,16 @@ void* sfree(void* p) {
         if(prev == nullptr && next == nullptr) {
             mmap_head = nullptr;
         }
-        if(prev != nullptr) {
-            prev->next = next;
-        }
-        if(next != nullptr) {
-            next->prev = prev;
+        else {
+            if(prev != nullptr) {
+                prev->next = next;
+            }
+            else {
+                mmap_head = next;
+            }
+            if(next != nullptr) {
+                next->prev = prev;
+            }
         }
         return nullptr;
     }
