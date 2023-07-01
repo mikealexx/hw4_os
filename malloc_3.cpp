@@ -180,6 +180,8 @@ typedef struct Initialize {
     }
 } InitOrders;
 
+static InitOrders init; //initialize first 32 blocks of 128KB
+
 int _order(size_t size) {
     int order = 0;
     while(size + sizeof(Metadata) > 128) {
@@ -204,7 +206,6 @@ int _order(size_t size) {
 
  */
 void* smalloc(size_t size) {
-    static InitOrders init; //initialize first 32 blocks of 128KB
     if(size == 0 || size > pow(10, 8)) {
         return NULL;
     }
@@ -432,7 +433,6 @@ size_t _num_free_bytes() {
 }
 
 size_t _num_allocated_blocks() {
-    static InitOrders init; //initialize first 32 blocks of 128KB
     size_t count = 0;
     Metadata* allocated = allocated_blocks;
     while(allocated != nullptr) {
