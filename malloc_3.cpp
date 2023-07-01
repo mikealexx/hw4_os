@@ -159,23 +159,23 @@ typedef struct Initialize {
         Metadata* last = nullptr;
         last = (Metadata*)curr_bottom;
         last->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
-        last->size = 131072 - sizeof(Metadata);
+        last->size = 128 * 1024 - sizeof(Metadata);
         last->is_free = true;
         last->next = nullptr;
         last->prev = nullptr;
         orders[10] = last;
-        curr_bottom = (void*)((size_t)curr_bottom + 131072);
+        curr_bottom = (void*)((size_t)curr_bottom + 128 * 1024);
         for(int i = 1; i < 32; i++) {
             curr = (Metadata*)curr_bottom;
             curr->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
-            curr->size = 131072 - sizeof(Metadata);
+            curr->size = 128 * 1024 - sizeof(Metadata);
             curr->is_free = true;
             curr->next = nullptr;
             curr->prev = last;
             last->next = curr;
             last = curr;
-            curr = curr->next;
-            curr_bottom = (void*)((size_t)curr_bottom + 131072);
+            curr = nullptr;
+            curr_bottom = (void*)((size_t)curr_bottom + 128 * 1024);
         }
     }
 } InitOrders;
