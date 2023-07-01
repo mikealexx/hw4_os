@@ -327,6 +327,7 @@ void* smalloc(size_t size) {
                     }
                     last->next = curr;
                     curr->prev = last;
+                    curr->next = nullptr;
                 }
                 return curr->addr;
             }
