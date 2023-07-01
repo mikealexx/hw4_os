@@ -76,7 +76,7 @@ void _trim_if_large_enough(void* metadata_ptr, size_t actual_size,  int order) {
     Metadata* curr = (Metadata*)metadata_ptr;
     _validate_cookie(curr);
     int curr_order = order;
-    while(actual_size <= (curr->size + sizeof(Metadata)) / 2) { //split
+    while(actual_size <= curr->size / 2) { //split
         curr_order--;
         if(curr_order < 0) {
             break;
@@ -84,72 +84,111 @@ void _trim_if_large_enough(void* metadata_ptr, size_t actual_size,  int order) {
         Metadata* new_block = (Metadata*)((size_t)metadata_ptr + (size_t)(pow(2, curr_order) * 128));
         new_block->cookie = COOKIE;
         new_block->addr = (void*)((size_t)new_block + sizeof(Metadata));
-        new_block->size = pow(2, curr_order) * 128 - sizeof(Metadata);
+        new_block->size = pow(2, curr_order) * 128;
         new_block->is_free = true;
         new_block->next = nullptr;
         new_block->prev = nullptr;
         _add_block_to_free_list((void*)new_block, curr_order);
-        curr->size = pow(2, curr_order) * 128 - sizeof(Metadata);
+        curr->size = pow(2, curr_order) * 128;
     }
-    //curr->size = pow(2, curr_order) * 128 - sizeof(Metadata);
+}
+
+void _remove_from_list(void* metadata_ptr, int order) {
+    Metadata* curr = (Metadata*)metadata_ptr;
+    _validate_cookie(curr);
+    Metadata* prev = curr->prev;
+    Metadata* next = curr->next;
+    if(prev == nullptr && next == nullptr) {
+        orders[order] = nullptr;
+    }
+    else {
+        if(prev != nullptr) {
+            prev->next = next;
+        }
+        else {
+            orders[order] = next;
+        }
+        if(next != nullptr) {
+            next->prev = prev;
+        }
+    }
 }
 
 void _merge_buddy_blocks(void* metadata_ptr, int order) {
+    // Metadata* curr = (Metadata*)metadata_ptr;
+    // _validate_cookie(curr);
+    // Metadata* buddy = nullptr;
+    // Metadata* last = nullptr;
+    // //Metadata* freed = nullptr;
+    // int curr_order = order;
+    // while(curr_order < 10) {
+    //     buddy = (Metadata*)((size_t)curr ^ (size_t)(pow(2, curr_order) * 128));
+    //     _validate_cookie(buddy);
+    //     if(buddy->is_free && buddy->size == curr->size) {
+    //         if(curr->addr < buddy->addr) {
+    //             curr->size = curr->size * 2;
+    //             curr->next = buddy->next;
+    //             if(buddy->next != nullptr) {
+    //                 buddy->next->prev = curr;
+    //             }
+    //             if(buddy->prev != nullptr) {
+    //                 buddy->prev->next = buddy->next;
+    //             }
+    //             else {
+    //                 orders[curr_order] = buddy->next;
+    //             }
+    //             last = curr;
+    //             // if(last != nullptr) {
+    //             //     freed = last;
+    //             // }
+    //             curr_order++;
+    //         }
+    //         else {
+    //             buddy->size = buddy->size * 2;
+    //             buddy->next = curr->next;
+    //             if(curr->next != nullptr) {
+    //                 curr->next->prev = buddy;
+    //             }
+    //             if(curr->prev != nullptr) {
+    //                 curr->prev->next = curr->next;
+    //             }
+    //             else {
+    //                 orders[curr_order] = curr->next;
+    //             }
+    //             last = buddy;
+    //             // if(last != nullptr) {
+    //             //     freed = last;
+    //             // }
+    //             curr_order++;
+    //         }
+    //     }
+    //     else {
+    //         break;
+    //     }
+    // }
+    // if(last != nullptr) {
+    //     _merge_buddy_blocks((void*)last, curr_order);
+    // }
+    // _add_block_to_free_list((void*)curr, curr_order);
+
     Metadata* curr = (Metadata*)metadata_ptr;
     _validate_cookie(curr);
-    Metadata* buddy = nullptr;
-    Metadata* last = nullptr;
-    //Metadata* freed = nullptr;
     int curr_order = order;
-    while(curr_order < 10) {
-        buddy = (Metadata*)((size_t)curr ^ (size_t)(pow(2, curr_order) * 128));
-        _validate_cookie(buddy);
-        if(buddy->is_free && buddy->size == curr->size) {
-            if(curr->addr < buddy->addr) {
-                curr->size = curr->size * 2;
-                curr->next = buddy->next;
-                if(buddy->next != nullptr) {
-                    buddy->next->prev = curr;
-                }
-                if(buddy->prev != nullptr) {
-                    buddy->prev->next = buddy->next;
-                }
-                else {
-                    orders[curr_order] = buddy->next;
-                }
-                last = curr;
-                // if(last != nullptr) {
-                //     freed = last;
-                // }
-                curr_order++;
-            }
-            else {
-                buddy->size = buddy->size * 2;
-                buddy->next = curr->next;
-                if(curr->next != nullptr) {
-                    curr->next->prev = buddy;
-                }
-                if(curr->prev != nullptr) {
-                    curr->prev->next = curr->next;
-                }
-                else {
-                    orders[curr_order] = curr->next;
-                }
-                last = buddy;
-                // if(last != nullptr) {
-                //     freed = last;
-                // }
-                curr_order++;
-            }
-        }
-        else {
-            break;
-        }
+    Metadata* buddy = (Metadata*)((size_t)curr ^ (size_t)(pow(2, curr_order) * 128));
+    _validate_cookie(buddy);
+    Metadata* last = nullptr;
+    if(curr_order >= 10) {
+        return;
     }
-    if(last != nullptr) {
-        _merge_buddy_blocks((void*)last, curr_order);
+    if(!buddy->is_free || buddy->size != curr->size) {
+        _add_block_to_free_list((void*)curr, curr_order);
+        return;
     }
-    _add_block_to_free_list((void*)curr, curr_order);
+    _remove_from_list((void*)curr, curr_order);
+    _remove_from_list((void*)buddy, curr_order);
+    if(curr->addr < buddy->addr) {
+        curr->size = pow(2, curr_order + 1) * 128 - sizeof(Metadata);
+    }
 }
 
 typedef struct Initialize {
@@ -255,16 +294,18 @@ void* smalloc(size_t size) {
                 if(prev == nullptr && next == nullptr) {
                     orders[i] = nullptr;
                 }
-                if(prev != nullptr) {
-                    prev->next = next;
-                }
                 else {
-                    orders[i] = next;
+                    if(prev != nullptr) {
+                        prev->next = next;
+                    }
+                    else {
+                        orders[i] = next;
+                    }
+                    if(next != nullptr) {
+                        next->prev = prev;
+                    }
                 }
-                if(next != nullptr) {
-                    next->prev = prev;
-                }
-                _trim_if_large_enough((void*)curr, size, i);
+                _trim_if_large_enough((void*)curr, size + sizeof(Metadata), i);
                 if(allocated_blocks == nullptr) { //add to used blocks list
                     allocated_blocks = curr;
                     curr->prev = nullptr;
@@ -367,14 +408,16 @@ void* sfree(void* p) {
         if(prev == nullptr && next == nullptr) {
             allocated_blocks = nullptr;
         }
-        if(prev != nullptr) {
-            prev->next = next;
-        }
         else {
-            allocated_blocks = next;
-        }
-        if(next != nullptr) {
-            next->prev = prev;
+            if(prev != nullptr) {
+                prev->next = next;
+            }
+            else {
+                allocated_blocks = next;
+            }
+            if(next != nullptr) {
+                next->prev = prev;
+            }
         }
         _merge_buddy_blocks(curr, _order(curr->size));
     }
