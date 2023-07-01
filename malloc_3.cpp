@@ -392,7 +392,7 @@ void* sfree(void* p) {
     if(curr->is_free) {
         return nullptr;
     }
-    if(curr->size >= 128 * 1024) { //allocated using mmap - use munmap to free
+    if(curr->size > 128 * 1024) { //allocated using mmap - use munmap to free
         Metadata* prev = curr->prev;
         Metadata* next = curr->next;
         _validate_cookie(prev);
