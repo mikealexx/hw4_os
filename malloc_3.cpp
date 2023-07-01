@@ -355,25 +355,28 @@ void* scalloc(size_t num, size_t size) {
     if(num == 0 || size == 0 || num * size > pow(10, 8)) {
         return nullptr;
     }
-    void* ptr = smalloc(num * size);
-    _validate_cookie((Metadata*)((size_t)ptr - sizeof(Metadata)));
+    Metadata* ptr = (Metadata*)((size_t)smalloc(num * size) - sizeof(Metadata));
     if(ptr == nullptr) {
         return nullptr;
     }
-    memset(ptr, 0, num * size);
-    if(allocated_blocks == nullptr) { //add to used blocks list
-        allocated_blocks = (Metadata*)((size_t)ptr - sizeof(Metadata));
-    }
-    else {
-        Metadata* last = allocated_blocks;
-        while(last->next != nullptr) {
-            _validate_cookie(last);
-            last = last->next;
-        }
-        last->next = (Metadata*)((size_t)ptr - sizeof(Metadata));
-        last->next->prev = last;
-    }
-    return ptr;
+    _validate_cookie(ptr);
+    memset((void*)((size_t)ptr + sizeof(Metadata)), 0, num * size);
+    // if(allocated_blocks == nullptr) { //add to used blocks list
+    //     allocated_blocks = ptr;
+    //     ptr->prev = nullptr;
+    //     ptr->next = nullptr;
+    // }
+    // else {
+    //     Metadata* last = allocated_blocks;
+    //     while(last->next != nullptr) {
+    //         _validate_cookie(last);
+    //         last = last->next;
+    //     }
+    //     last->next = ptr;
+    //     ptr->prev = last;
+    //     ptr->next = nullptr;
+    // }
+    return (void*)((size_t)ptr + sizeof(Metadata));
 }
 
 /**
