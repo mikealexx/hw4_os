@@ -149,7 +149,7 @@ void _merge_buddy_blocks(void* metadata_ptr, int order) {
     if(last != nullptr) {
         _merge_buddy_blocks((void*)last, curr_order);
     }
-    _add_block_to_free_list((void*)freed, curr_order-1);
+    _add_block_to_free_list((void*)curr, curr_order);
 }
 
 typedef struct Initialize {
@@ -360,7 +360,6 @@ void* sfree(void* p) {
     }
     if(!curr->is_free) {
         curr->is_free = true;
-        _merge_buddy_blocks(curr, _order(curr->size));
         Metadata* prev = curr->prev;
         Metadata* next = curr->next;
         _validate_cookie(prev);
@@ -371,9 +370,13 @@ void* sfree(void* p) {
         if(prev != nullptr) {
             prev->next = next;
         }
+        else {
+            allocated_blocks = next;
+        }
         if(next != nullptr) {
             next->prev = prev;
         }
+        _merge_buddy_blocks(curr, _order(curr->size));
     }
     return nullptr;
 }
