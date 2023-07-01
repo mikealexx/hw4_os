@@ -154,8 +154,8 @@ typedef struct Initialize {
         }
         initialized = true;
         _align_program_break();
-        void* curr_bottom = sbrk(32 * 131072); //allocate 32 * 128KB
-        Metadata* curr = orders[10];
+        void* curr_bottom = sbrk(32 * 128 * 1024); //allocate 32 * 128KB
+        Metadata* curr = nullptr;
         Metadata* last = nullptr;
         last = (Metadata*)curr_bottom;
         last->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
@@ -163,6 +163,7 @@ typedef struct Initialize {
         last->is_free = true;
         last->next = nullptr;
         last->prev = nullptr;
+        orders[10] = last;
         curr_bottom = (void*)((size_t)curr_bottom + 131072);
         for(int i = 1; i < 32; i++) {
             curr = (Metadata*)curr_bottom;
