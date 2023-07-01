@@ -449,15 +449,35 @@ size_t _num_allocated_blocks() {
             curr = curr->next;
         }
     }
+    Metadata* mmap = mmap_head;
+    while(mmap != nullptr) {
+        _validate_cookie(mmap);
+        count++;
+        mmap = mmap->next;
+    }
     return count;
 }
 
 size_t _num_allocated_bytes() {
-    size_t count = 32 * 128 * 1024;
+    size_t count = 0;
+    Metadata* allocated = allocated_blocks;
+    while(allocated != nullptr) {
+        _validate_cookie(allocated);
+        count+= allocated->size;
+        allocated = allocated->next;
+    }
+    for(int i = 0; i < 11; i++) {
+        Metadata* curr = orders[i];
+        while(curr != nullptr) {
+            _validate_cookie(curr);
+            count+= curr->size;
+            curr = curr->next;
+        }
+    }
     Metadata* mmap = mmap_head;
     while(mmap != nullptr) {
         _validate_cookie(mmap);
-        count += mmap->size;
+        count+= mmap->size;
         mmap = mmap->next;
     }
     return count;
@@ -465,12 +485,6 @@ size_t _num_allocated_bytes() {
 
 size_t _num_meta_data_bytes() {
     size_t count = _num_allocated_blocks() * sizeof(Metadata);
-    Metadata* mmap = mmap_head;
-    while(mmap != nullptr) {
-        _validate_cookie(mmap);
-        count += sizeof(Metadata);
-        mmap = mmap->next;
-    }
     return count;
 }
 
