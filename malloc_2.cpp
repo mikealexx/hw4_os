@@ -4,7 +4,7 @@
 #include <string.h>
 
 typedef struct MallocMetadata {
-    void* addr;
+    void* addr; 
     size_t size;
     bool is_free;
     MallocMetadata* next;

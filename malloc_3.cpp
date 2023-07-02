@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 typedef struct MallocMetadata {
-    uint32_t cookie;
+    uint32_t cookie; 
     void* addr;
     size_t size;
     bool is_free;

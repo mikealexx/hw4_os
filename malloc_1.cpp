@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <math.h>
 
-/**
+/** 
  * @brief Tries to allocate size bytes.
  * 
  * @param size The size of the block to allocate.
