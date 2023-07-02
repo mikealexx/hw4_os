@@ -191,21 +191,21 @@ int _srealloc_buddy_check(Metadata* curr, size_t size, size_t curr_block_size, i
         return -1;
     }
     _validate_cookie(curr);
-    Metadata* buddy = (Metadata*)((size_t)curr ^ curr->size);
-    if(buddy == nullptr || !buddy->is_free || buddy->size != curr->size) {
+    Metadata* buddy = (Metadata*)((size_t)curr->addr - sizeof(Metadata) ^ curr_block_size);
+    if(buddy == nullptr || !buddy->is_free || buddy->size != curr_block_size) {
         *resizable = false;
         return -1;
     }
     _validate_cookie(buddy);
-    if(curr->size + buddy->size - sizeof(Metadata) >= size) {
+    if(curr_block_size + buddy->size - sizeof(Metadata) >= size) {
         *resizable = true;
         return curr_order;
     }
     if(curr->addr < buddy->addr) {
-        _srealloc_buddy_check(curr, size, curr->size * 2, curr_order + 1, resizable);
+        return _srealloc_buddy_check(curr, size, curr->size * 2, curr_order + 1, resizable);
     }
     else {
-        _srealloc_buddy_check(buddy, size, curr->size * 2, curr_order + 1, resizable);
+        return _srealloc_buddy_check(buddy, size, curr->size * 2, curr_order + 1, resizable);
     }
     return -1; //won't reach
 }
@@ -217,8 +217,8 @@ void* _srealloc_buddy_resize(void* metadata_ptr, int order, int max_order) {
     Metadata* buddy = (Metadata*)((size_t)curr ^ curr->size);
     _validate_cookie(buddy);
     Metadata* last = nullptr;
-    if(curr_order == max_order) {
-        return metadata_ptr;
+    if(curr_order == max_order + 1) {
+        return (void*)curr;
     }
     _remove_from_list((void*)buddy, curr_order);
     if(curr->addr < buddy->addr) {
@@ -454,6 +454,13 @@ void* srealloc(void* oldp, size_t size) {
     void* new_ptr;
     if(!resizable) {
         new_ptr = smalloc(size);
+        if(new_ptr == nullptr) {
+            return nullptr;
+        }
+        Metadata* new_meta = (Metadata*)((size_t)new_ptr - sizeof(Metadata));
+        memmove((void*)((size_t)new_meta + sizeof(Metadata)), oldp, ((Metadata*)((size_t)oldp - sizeof(Metadata)))->size - sizeof(Metadata));
+        sfree(oldp);
+        return (void*)((size_t)new_meta + sizeof(Metadata));
     }
     else {
         Metadata* prev = curr->prev;
@@ -476,13 +483,26 @@ void* srealloc(void* oldp, size_t size) {
         }
         new_ptr = _srealloc_buddy_resize(curr, _order(curr->size), new_order);
     }
-    if(new_ptr == nullptr) {
+    Metadata* new_meta = (Metadata*)new_ptr;
+    if(new_meta == nullptr) {
         return nullptr;
     }
-    _validate_cookie((Metadata*)((size_t)new_ptr - sizeof(Metadata)));
-    memmove(new_ptr, oldp, ((Metadata*)((size_t)oldp - sizeof(Metadata)))->size);
-    sfree(oldp);
-    return new_ptr;
+    _validate_cookie(new_meta);
+    Metadata* last = allocated_blocks;
+    if(last == nullptr) {
+        allocated_blocks = new_meta;
+    }
+    else {
+        while(last != nullptr && last->next != nullptr) {
+            last = last->next;
+        }
+        last->next = new_meta;
+    }
+    new_meta->prev = last;
+    new_meta->next = nullptr;
+    new_meta->is_free = false;
+    memmove((void*)((size_t)new_meta + sizeof(Metadata)), oldp, ((Metadata*)((size_t)oldp - sizeof(Metadata)))->size - sizeof(Metadata));
+    return (void*)((size_t)new_meta + sizeof(Metadata));
 }
 
 size_t _num_free_blocks() {
