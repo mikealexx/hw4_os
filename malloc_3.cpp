@@ -202,7 +202,7 @@ int _srealloc_buddy_check(Metadata* curr, size_t size, size_t curr_block_size, i
         return curr_order;
     }
     if(curr->addr < buddy->addr) {
-        return _srealloc_buddy_check(curr, size, curr->size * 2, curr_order + 1, resizable);
+        return _srealloc_buddy_check(curr, size, curr_block_size * 2, curr_order + 1, resizable);
     }
     else {
         return _srealloc_buddy_check(buddy, size, curr->size * 2, curr_order + 1, resizable);
