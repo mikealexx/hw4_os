@@ -449,6 +449,16 @@ void* srealloc(void* oldp, size_t size) {
     if(size <= curr->size) { //reuse same block
         return oldp;
     }
+    if(curr->size > 128 * 1024) //allocated using mmap
+    {
+        void* new_ptr = smalloc(size);
+        if(new_ptr == nullptr) {
+            return nullptr;
+        }
+        _validate_cookie(curr);
+        memmove(new_ptr, oldp, curr->size);
+        return new_ptr;
+    }
     bool resizable;
     int new_order = _srealloc_buddy_check(curr, size, curr->size, _order(curr->size), &resizable); //check if we can use buddies
     void* new_ptr;
