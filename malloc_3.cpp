@@ -450,9 +450,9 @@ void* srealloc(void* oldp, size_t size) {
         return oldp;
     }
     bool resizable;
-    int new_order = _srealloc_buddy_check(curr, size, curr->size, _order(curr->size), &resizable);
+    int new_order = _srealloc_buddy_check(curr, size, curr->size, _order(curr->size), &resizable); //check if we can use buddies
     void* new_ptr;
-    if(!resizable) {
+    if(!resizable) { //we can't use buddies
         new_ptr = smalloc(size);
         if(new_ptr == nullptr) {
             return nullptr;
@@ -462,7 +462,7 @@ void* srealloc(void* oldp, size_t size) {
         sfree(oldp);
         return (void*)((size_t)new_meta + sizeof(Metadata));
     }
-    else {
+    else { //we can use buddies
         Metadata* prev = curr->prev;
         Metadata* next = curr->next;
         _validate_cookie(prev);
