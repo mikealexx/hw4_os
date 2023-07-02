@@ -191,7 +191,7 @@ int _srealloc_buddy_check(Metadata* curr, size_t size, size_t curr_block_size, i
         return -1;
     }
     _validate_cookie(curr);
-    Metadata* buddy = (Metadata*)((size_t)curr->addr - sizeof(Metadata) ^ curr_block_size);
+    Metadata* buddy = (Metadata*)(((size_t)curr->addr - sizeof(Metadata)) ^ curr_block_size);
     if(buddy == nullptr || !buddy->is_free || buddy->size != curr_block_size) {
         *resizable = false;
         return -1;
