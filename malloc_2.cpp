@@ -11,7 +11,7 @@ typedef struct MallocMetadata {
     MallocMetadata* prev;
 } Metadata;
 
-static Metadata* head = nullptr;
+static Metadata* head = NULL;
 
 /**
  * @brief Searches for a free block with at least ‘size’ bytes or allocates (sbrk()) one if none are
@@ -31,41 +31,41 @@ void* smalloc(size_t size) {
     if(size == 0 || size > pow(10, 8)) {
         return NULL;
     }
-    if(head == nullptr) {
+    if(head == NULL) {
         void* ptr = sbrk(size + sizeof(Metadata));
         if(ptr == (void*)-1) {
-            return nullptr;
+            return NULL;
         }
         head = (Metadata*)ptr;
         head->addr = (void*)((size_t)ptr + sizeof(Metadata));
         head->size = size;
         head->is_free = false;
-        head->next = nullptr;
-        head->prev = nullptr;
+        head->next = NULL;
+        head->prev = NULL;
         return head->addr;
     }
     else {
         Metadata* curr = head;
         Metadata* tail = head;
-        while(curr != nullptr) {
+        while(curr != NULL) {
             if(curr->is_free && curr->size >= size) {
                 curr->is_free = false;
                 return curr->addr;
             }
             curr = curr->next;
-            if(tail->next != nullptr) {
+            if(tail->next != NULL) {
                 tail = tail->next;
             }
         }
         void* ptr = sbrk(size + sizeof(Metadata));
         if(ptr == (void*)-1) {
-            return nullptr;
+            return NULL;
         }
         Metadata* new_block = (Metadata*)ptr;
         new_block->addr = (void*)((size_t)ptr + sizeof(Metadata));
         new_block->size = size;
         new_block->is_free = false;
-        new_block->next = nullptr;
+        new_block->next = NULL;
         new_block->prev = tail;
         tail->next = new_block;
         return new_block->addr;
@@ -88,11 +88,11 @@ void* smalloc(size_t size) {
  */
 void* scalloc(size_t num, size_t size) {
     if(num == 0 || size == 0 || num * size > pow(10, 8)) {
-        return nullptr;
+        return NULL;
     }
     void* ptr = smalloc(num * size);
-    if(ptr == nullptr) {
-        return nullptr;
+    if(ptr == NULL) {
+        return NULL;
     }
     memset(ptr, 0, num * size);
     return ptr;
@@ -107,14 +107,14 @@ void* scalloc(size_t num, size_t size) {
             Presume that all pointers ‘p’ truly points to the beginning of an allocated block.
  */
 void* sfree(void* p) {
-    if(p == nullptr) {
-        return nullptr;
+    if(p == NULL) {
+        return NULL;
     }
     Metadata* curr = (Metadata*)((size_t)p - sizeof(Metadata));
     if(!curr->is_free) {
         curr->is_free = true;
     }
-    return nullptr;
+    return NULL;
 }
 
 /**
@@ -137,17 +137,17 @@ void* sfree(void* p) {
  */
 void* srealloc(void* oldp, size_t size) {
     if(size == 0 || size > pow(10, 8)) {
-        return nullptr;
+        return NULL;
     }
-    if(oldp == nullptr) {
+    if(oldp == NULL) {
         return smalloc(size);
     }
     if(size <= ((Metadata*)((size_t)oldp - sizeof(Metadata)))->size) {
         return oldp;
     }
     void* new_ptr = smalloc(size);
-    if(new_ptr == nullptr) {
-        return nullptr;
+    if(new_ptr == NULL) {
+        return NULL;
     }
     memmove(new_ptr, oldp, ((Metadata*)((size_t)oldp - sizeof(Metadata)))->size);
     sfree(oldp);
@@ -157,7 +157,7 @@ void* srealloc(void* oldp, size_t size) {
 size_t _num_free_blocks() {
     size_t count = 0;
     Metadata* curr = head;
-    while(curr != nullptr) {
+    while(curr != NULL) {
         if(curr->is_free) {
             count++;
         }
@@ -169,7 +169,7 @@ size_t _num_free_blocks() {
 size_t _num_free_bytes() {
     size_t count = 0;
     Metadata* curr = head;
-    while(curr != nullptr) {
+    while(curr != NULL) {
         if(curr->is_free) {
             count += curr->size;
         }
@@ -181,7 +181,7 @@ size_t _num_free_bytes() {
 size_t _num_allocated_blocks() {
     size_t count = 0;
     Metadata* curr = head;
-    while(curr != nullptr) {
+    while(curr != NULL) {
         count++;
         curr = curr->next;
     }
@@ -191,7 +191,7 @@ size_t _num_allocated_blocks() {
 size_t _num_allocated_bytes() {
     size_t count = 0;
     Metadata* curr = head;
-    while(curr != nullptr) {
+    while(curr != NULL) {
         count += curr->size;
         curr = curr->next;
     }

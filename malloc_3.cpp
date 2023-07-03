@@ -25,13 +25,13 @@ uint32_t generateRandomCookie() {
 }
 
 static bool initialized = false;
-static Metadata* orders[11] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
-static Metadata* mmap_head = nullptr;
-static Metadata* allocated_blocks = nullptr;
+static Metadata* orders[11] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static Metadata* mmap_head = NULL;
+static Metadata* allocated_blocks = NULL;
 static uint32_t COOKIE = 0;
 
 void _validate_cookie(Metadata* metadata_ptr) {
-    if(metadata_ptr != nullptr) {
+    if(metadata_ptr != NULL) {
         if(metadata_ptr->cookie != COOKIE) {
             exit(0xdeadbeef);
         }
@@ -53,16 +53,16 @@ void _init() {
     initialized = true;
     _align_program_break();
     void* curr_bottom = sbrk(32 * 128 * 1024); //allocate 32 * 128KB
-    Metadata* curr = nullptr;
-    Metadata* last = nullptr;
+    Metadata* curr = NULL;
+    Metadata* last = NULL;
     last = (Metadata*)curr_bottom;
     last->cookie = COOKIE;
     last->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
     last->size = 128 * 1024;
     last->actual_size = 0;
     last->is_free = true;
-    last->next = nullptr;
-    last->prev = nullptr;
+    last->next = NULL;
+    last->prev = NULL;
     orders[10] = last;
     curr_bottom = (void*)((size_t)curr_bottom + 128 * 1024);
     for(int i = 1; i < 32; i++) {
@@ -72,7 +72,7 @@ void _init() {
         curr->size = 128 * 1024;
         curr->actual_size = 0;
         curr->is_free = true;
-        curr->next = nullptr;
+        curr->next = NULL;
         curr->prev = last;
         last->next = curr;
         last = curr;
@@ -84,21 +84,21 @@ void _init() {
 void _add_block_to_free_list(void* metadata_ptr, int order) {
     Metadata* curr = (Metadata*)metadata_ptr;
     _validate_cookie(curr);
-    if(orders[order] == nullptr) {
+    if(orders[order] == NULL) {
         orders[order] = curr;
-        curr->next = nullptr;
-        curr->prev = nullptr;
+        curr->next = NULL;
+        curr->prev = NULL;
     }
     else {
         Metadata* last = orders[order];
-        while(last->next != nullptr && last->next->addr < curr->addr) {
+        while(last->next != NULL && last->next->addr < curr->addr) {
             _validate_cookie(last);
             last = last->next;
         }
-        if(last->next == nullptr) {
+        if(last->next == NULL) {
             last->next = curr;
             curr->prev = last;
-            curr->next = nullptr;
+            curr->next = NULL;
         }
         else {
             curr->next = last->next;
@@ -123,8 +123,8 @@ void _trim_if_large_enough(void* metadata_ptr, size_t actual_size,  int order) {
         new_block->addr = (void*)((size_t)new_block + sizeof(Metadata));
         new_block->size = pow(2, curr_order) * 128;
         new_block->is_free = true;
-        new_block->next = nullptr;
-        new_block->prev = nullptr;
+        new_block->next = NULL;
+        new_block->prev = NULL;
         _add_block_to_free_list((void*)new_block, curr_order);
         curr->size = pow(2, curr_order) * 128;
     }
@@ -135,17 +135,17 @@ void _remove_from_list(void* metadata_ptr, int order) {
     _validate_cookie(curr);
     Metadata* prev = curr->prev;
     Metadata* next = curr->next;
-    if(prev == nullptr && next == nullptr) {
-        orders[order] = nullptr;
+    if(prev == NULL && next == NULL) {
+        orders[order] = NULL;
     }
     else {
-        if(prev != nullptr) {
+        if(prev != NULL) {
             prev->next = next;
         }
         else {
             orders[order] = next;
         }
-        if(next != nullptr) {
+        if(next != NULL) {
             next->prev = prev;
         }
     }
@@ -157,12 +157,12 @@ void _merge_buddy_blocks(void* metadata_ptr, int order) {
     int curr_order = order;
     Metadata* buddy = (Metadata*)((size_t)curr ^ curr->size);
     _validate_cookie(buddy);
-    Metadata* last = nullptr;
+    Metadata* last = NULL;
     if(curr_order >= 10) {
         _add_block_to_free_list((void*)curr, curr_order);
         return;
     }
-    if(buddy == nullptr || !buddy->is_free || buddy->size != curr->size) {
+    if(buddy == NULL || !buddy->is_free || buddy->size != curr->size) {
         _add_block_to_free_list((void*)curr, curr_order);
         return;
     }
@@ -189,13 +189,13 @@ int _order(size_t size) {
 }
 
 int _srealloc_buddy_check(Metadata* curr, size_t size, size_t curr_block_size, int curr_order, bool* resizable) {
-    if(curr == nullptr) {
+    if(curr == NULL) {
         *resizable = false;
         return -1;
     }
     _validate_cookie(curr);
     Metadata* buddy = (Metadata*)(((size_t)curr->addr - sizeof(Metadata)) ^ curr_block_size);
-    if(buddy == nullptr || !buddy->is_free || buddy->size != curr_block_size) {
+    if(buddy == NULL || !buddy->is_free || buddy->size != curr_block_size) {
         *resizable = false;
         return -1;
     }
@@ -219,7 +219,7 @@ void* _srealloc_buddy_resize(void* metadata_ptr, int order, int max_order) {
     int curr_order = order;
     Metadata* buddy = (Metadata*)((size_t)curr ^ curr->size);
     _validate_cookie(buddy);
-    Metadata* last = nullptr;
+    Metadata* last = NULL;
     if(curr_order == max_order + 1) {
         return (void*)curr;
     }
@@ -266,14 +266,14 @@ void* smalloc(size_t size) {
         new_block->size = size + sizeof(Metadata);
         new_block->actual_size = size;
         new_block->is_free = false;
-        new_block->next = nullptr;
-        new_block->prev = nullptr;
-        if(mmap_head == nullptr) {
+        new_block->next = NULL;
+        new_block->prev = NULL;
+        if(mmap_head == NULL) {
             mmap_head = new_block;
         }
         else {
             Metadata* last = mmap_head;
-            while(last->next != nullptr) {
+            while(last->next != NULL) {
                 _validate_cookie(last);
                 last = last->next;
             }
@@ -284,52 +284,52 @@ void* smalloc(size_t size) {
     }
     int order = _order(size + sizeof(Metadata));
     for(int i = order; i < 11; i++) { //find lowest order with free blocks that fits
-        if(orders[i] == nullptr) {
+        if(orders[i] == NULL) {
             continue;
         }
         Metadata* curr = orders[i];
-        while(curr != nullptr) { //find free block - first one should be free (might remove while later) - not removing, I'm scared
+        while(curr != NULL) { //find free block - first one should be free (might remove while later) - not removing, I'm scared
             _validate_cookie(curr);
             if(curr->is_free) {
                 curr->is_free = false;
                 curr->actual_size = size;
                 Metadata* prev = curr->prev;
                 Metadata* next = curr->next;
-                if(prev == nullptr && next == nullptr) {
-                    orders[i] = nullptr;
+                if(prev == NULL && next == NULL) {
+                    orders[i] = NULL;
                 }
                 else {
-                    if(prev != nullptr) {
+                    if(prev != NULL) {
                         prev->next = next;
                     }
                     else {
                         orders[i] = next;
                     }
-                    if(next != nullptr) {
+                    if(next != NULL) {
                         next->prev = prev;
                     }
                 }
                 _trim_if_large_enough((void*)curr, size + sizeof(Metadata), i);
-                if(allocated_blocks == nullptr) { //add to used blocks list
+                if(allocated_blocks == NULL) { //add to used blocks list
                     allocated_blocks = curr;
-                    curr->prev = nullptr;
-                    curr->next = nullptr;
+                    curr->prev = NULL;
+                    curr->next = NULL;
                 }
                 else {
                     Metadata* last = allocated_blocks;
-                    while(last->next != nullptr) {
+                    while(last->next != NULL) {
                         last = last->next;
                     }
                     last->next = curr;
                     curr->prev = last;
-                    curr->next = nullptr;
+                    curr->next = NULL;
                 }
                 return curr->addr;
             }
             curr = curr->next;
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 /**
@@ -348,11 +348,11 @@ void* smalloc(size_t size) {
  */
 void* scalloc(size_t num, size_t size) {
     if(num == 0 || size == 0 || num * size > pow(10, 8)) {
-        return nullptr;
+        return NULL;
     }
     Metadata* ptr = (Metadata*)((size_t)smalloc(num * size) - sizeof(Metadata));
-    if(ptr == nullptr) {
-        return nullptr;
+    if(ptr == NULL) {
+        return NULL;
     }
     _validate_cookie(ptr);
     memset((void*)((size_t)ptr + sizeof(Metadata)), 0, num * size);
@@ -368,13 +368,13 @@ void* scalloc(size_t num, size_t size) {
             Presume that all pointers ‘p’ truly points to the beginning of an allocated block.
  */
 void* sfree(void* p) {
-    if(p == nullptr) {
-        return nullptr;
+    if(p == NULL) {
+        return NULL;
     }
     Metadata* curr = (Metadata*)((size_t)p - sizeof(Metadata));
     _validate_cookie(curr);
     if(curr->is_free) {
-        return nullptr;
+        return NULL;
     }
     if(curr->size > 128 * 1024) { //allocated using mmap - use munmap to free
         Metadata* prev = curr->prev;
@@ -382,23 +382,23 @@ void* sfree(void* p) {
         _validate_cookie(prev);
         _validate_cookie(next);
         if(munmap(curr, curr->size + sizeof(Metadata)) == -1) {
-            return nullptr;
+            return NULL;
         }
-        if(prev == nullptr && next == nullptr) {
-            mmap_head = nullptr;
+        if(prev == NULL && next == NULL) {
+            mmap_head = NULL;
         }
         else {
-            if(prev != nullptr) {
+            if(prev != NULL) {
                 prev->next = next;
             }
             else {
                 mmap_head = next;
             }
-            if(next != nullptr) {
+            if(next != NULL) {
                 next->prev = prev;
             }
         }
-        return nullptr;
+        return NULL;
     }
     if(!curr->is_free) {
         curr->is_free = true;
@@ -407,23 +407,23 @@ void* sfree(void* p) {
         Metadata* next = curr->next;
         _validate_cookie(prev);
         _validate_cookie(next);
-        if(prev == nullptr && next == nullptr) {
-            allocated_blocks = nullptr;
+        if(prev == NULL && next == NULL) {
+            allocated_blocks = NULL;
         }
         else {
-            if(prev != nullptr) {
+            if(prev != NULL) {
                 prev->next = next;
             }
             else {
                 allocated_blocks = next;
             }
-            if(next != nullptr) {
+            if(next != NULL) {
                 next->prev = prev;
             }
         }
         _merge_buddy_blocks(curr, _order(curr->size));
     }
-    return nullptr;
+    return NULL;
 }
 
 /**
@@ -446,10 +446,10 @@ void* sfree(void* p) {
  */
 void* srealloc(void* oldp, size_t size) {
     if(size == 0 || size > pow(10, 8)) {
-        return nullptr;
+        return NULL;
     }
     Metadata* curr = (Metadata*)((size_t)oldp - sizeof(Metadata));
-    if(curr == nullptr) {
+    if(curr == NULL) {
         return smalloc(size);
     }
     _validate_cookie(curr);
@@ -459,8 +459,8 @@ void* srealloc(void* oldp, size_t size) {
             return oldp;
         }
         void* new_ptr = smalloc(size);
-        if(new_ptr == nullptr) {
-            return nullptr;
+        if(new_ptr == NULL) {
+            return NULL;
         }
         _validate_cookie(curr);
         memmove(new_ptr, oldp, curr->size);
@@ -475,8 +475,8 @@ void* srealloc(void* oldp, size_t size) {
     void* new_ptr;
     if(!resizable) { //we can't use buddies
         new_ptr = smalloc(size);
-        if(new_ptr == nullptr) {
-            return nullptr;
+        if(new_ptr == NULL) {
+            return NULL;
         }
         Metadata* new_meta = (Metadata*)((size_t)new_ptr - sizeof(Metadata));
         memmove((void*)((size_t)new_meta + sizeof(Metadata)), oldp, ((Metadata*)((size_t)oldp - sizeof(Metadata)))->size - sizeof(Metadata));
@@ -488,39 +488,39 @@ void* srealloc(void* oldp, size_t size) {
         Metadata* next = curr->next;
         _validate_cookie(prev);
         _validate_cookie(next);
-        if(prev == nullptr && next == nullptr) {
-            allocated_blocks = nullptr;
+        if(prev == NULL && next == NULL) {
+            allocated_blocks = NULL;
         }
         else {
-            if(prev != nullptr) {
+            if(prev != NULL) {
                 prev->next = next;
             }
             else {
                 allocated_blocks = next;
             }
-            if(next != nullptr) {
+            if(next != NULL) {
                 next->prev = prev;
             }
         }
         new_ptr = _srealloc_buddy_resize(curr, _order(curr->size), new_order);
     }
     Metadata* new_meta = (Metadata*)new_ptr;
-    if(new_meta == nullptr) {
-        return nullptr;
+    if(new_meta == NULL) {
+        return NULL;
     }
     _validate_cookie(new_meta);
     Metadata* last = allocated_blocks;
-    if(last == nullptr) {
+    if(last == NULL) {
         allocated_blocks = new_meta;
     }
     else {
-        while(last != nullptr && last->next != nullptr) {
+        while(last != NULL && last->next != NULL) {
             last = last->next;
         }
         last->next = new_meta;
     }
     new_meta->prev = last;
-    new_meta->next = nullptr;
+    new_meta->next = NULL;
     new_meta->is_free = false;
     memmove((void*)((size_t)new_meta + sizeof(Metadata)), oldp, ((Metadata*)((size_t)oldp - sizeof(Metadata)))->size - sizeof(Metadata));
     return (void*)((size_t)new_meta + sizeof(Metadata));
@@ -530,7 +530,7 @@ size_t _num_free_blocks() {
     size_t count = 0;
     for(int i = 0; i < 11; i++) {
         Metadata* curr = orders[i];
-        while(curr != nullptr) {
+        while(curr != NULL) {
             _validate_cookie(curr);
             count++;
             curr = curr->next;
@@ -543,7 +543,7 @@ size_t _num_free_bytes() {
     size_t count = 0;
     for(int i = 0; i < 11; i++) {
         Metadata* curr = orders[i];
-        while(curr != nullptr) {
+        while(curr != NULL) {
             _validate_cookie(curr);
             count += curr->size - sizeof(Metadata);
             curr = curr->next;
@@ -555,21 +555,21 @@ size_t _num_free_bytes() {
 size_t _num_allocated_blocks() {
     size_t count = 0;
     Metadata* allocated = allocated_blocks;
-    while(allocated != nullptr) {
+    while(allocated != NULL) {
         _validate_cookie(allocated);
         count++;
         allocated = allocated->next;
     }
     for(int i = 0; i < 11; i++) {
         Metadata* curr = orders[i];
-        while(curr != nullptr) {
+        while(curr != NULL) {
             _validate_cookie(curr);
             count++;
             curr = curr->next;
         }
     }
     Metadata* mmap = mmap_head;
-    while(mmap != nullptr) {
+    while(mmap != NULL) {
         _validate_cookie(mmap);
         count++;
         mmap = mmap->next;
@@ -580,21 +580,21 @@ size_t _num_allocated_blocks() {
 size_t _num_allocated_bytes() {
     size_t count = 0;
     Metadata* allocated = allocated_blocks;
-    while(allocated != nullptr) {
+    while(allocated != NULL) {
         _validate_cookie(allocated);
         count+= allocated->size - sizeof(Metadata);
         allocated = allocated->next;
     }
     for(int i = 0; i < 11; i++) {
         Metadata* curr = orders[i];
-        while(curr != nullptr) {
+        while(curr != NULL) {
             _validate_cookie(curr);
             count+= curr->size - sizeof(Metadata);
             curr = curr->next;
         }
     }
     Metadata* mmap = mmap_head;
-    while(mmap != nullptr) {
+    while(mmap != NULL) {
         _validate_cookie(mmap);
         count+= mmap->size - sizeof(Metadata);
         mmap = mmap->next;
