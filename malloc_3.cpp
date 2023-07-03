@@ -9,6 +9,7 @@ typedef struct MallocMetadata {
     uint32_t cookie; 
     void* addr;
     size_t size;
+    size_t actual_size;
     bool is_free;
     MallocMetadata* next;
     MallocMetadata* prev;
@@ -58,6 +59,7 @@ void _init() {
     last->cookie = COOKIE;
     last->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
     last->size = 128 * 1024;
+    last->actual_size = 0;
     last->is_free = true;
     last->next = nullptr;
     last->prev = nullptr;
@@ -68,6 +70,7 @@ void _init() {
         curr->cookie = COOKIE;
         curr->addr = (void*)((size_t)curr_bottom + sizeof(Metadata));
         curr->size = 128 * 1024;
+        curr->actual_size = 0;
         curr->is_free = true;
         curr->next = nullptr;
         curr->prev = last;
@@ -227,6 +230,7 @@ void* _srealloc_buddy_resize(void* metadata_ptr, int order, int max_order) {
     }
     else {
         buddy->size *= 2;
+        buddy->actual_size = curr->actual_size;
         last = buddy;
     }
     return _srealloc_buddy_resize((void*)last, order + 1, max_order);
@@ -260,6 +264,7 @@ void* smalloc(size_t size) {
         new_block->cookie = COOKIE;
         new_block->addr = (void*)((size_t)ptr + sizeof(Metadata));
         new_block->size = size + sizeof(Metadata);
+        new_block->actual_size = size;
         new_block->is_free = false;
         new_block->next = nullptr;
         new_block->prev = nullptr;
@@ -283,10 +288,11 @@ void* smalloc(size_t size) {
             continue;
         }
         Metadata* curr = orders[i];
-        while(curr != nullptr) { //find free block - first one should be free (might remove while later)
+        while(curr != nullptr) { //find free block - first one should be free (might remove while later) - not removing, I'm scared
             _validate_cookie(curr);
             if(curr->is_free) {
                 curr->is_free = false;
+                curr->actual_size = size;
                 Metadata* prev = curr->prev;
                 Metadata* next = curr->next;
                 if(prev == nullptr && next == nullptr) {
@@ -396,6 +402,7 @@ void* sfree(void* p) {
     }
     if(!curr->is_free) {
         curr->is_free = true;
+        curr->actual_size = 0;
         Metadata* prev = curr->prev;
         Metadata* next = curr->next;
         _validate_cookie(prev);
@@ -446,11 +453,11 @@ void* srealloc(void* oldp, size_t size) {
         return smalloc(size);
     }
     _validate_cookie(curr);
-    if(size <= curr->size) { //reuse same block
-        return oldp;
-    }
     if(curr->size > 128 * 1024) //allocated using mmap
-    {
+    {   
+        if(size == curr->actual_size) { //reuse same block
+            return oldp;
+        }
         void* new_ptr = smalloc(size);
         if(new_ptr == nullptr) {
             return nullptr;
@@ -458,6 +465,10 @@ void* srealloc(void* oldp, size_t size) {
         _validate_cookie(curr);
         memmove(new_ptr, oldp, curr->size);
         return new_ptr;
+    }
+    if(size <= curr->size - sizeof(Metadata)) { //reuse same block
+        curr->actual_size = size;
+        return oldp;
     }
     bool resizable;
     int new_order = _srealloc_buddy_check(curr, size, curr->size, _order(curr->size), &resizable); //check if we can use buddies
